@@ -1,0 +1,13 @@
+import mongoose from "mongoose"
+const Schema = mongoose.Schema;
+const appointmentSchema = new Schema({
+    patientName: { type: String, required: true },
+    doctorName: { type: String, required: true },
+    date: { type: Date, required: true },
+    // Add more fields as needed
+});
+ 
+const Appointment =
+    mongoose.model('Appointment', appointmentSchema);
+ 
+export default Appointment;
