@@ -79,84 +79,82 @@ const Appointments = () => {
   };
 
   return (
-    <div className="flex-row" style={{ width: '100%' }}>
-      <div className="flex-column">
-        <div className="add-form">
-          <h4>{isEditMode ? 'Edit Appointment' : 'Add New Appointment'}</h4>
-          <form
-            className="appointment-form"
-            onSubmit={
+    <div className="main-container" style={{ width: '100%' }}>
+      <div className="form-sections">
+        <h4>{isEditMode ? 'Edit Appointment' : 'Add New Appointment'}</h4>
+        <form
+          onSubmit={
+            isEditMode
+              ? (e) => handleUpdateAppointment(selectedAppointment._id, e)
+              : handleAddAppointment
+          }
+        >
+          <label>Patient Name:</label>
+          <input
+            type="text"
+            value={
               isEditMode
-                ? (e) => handleUpdateAppointment(selectedAppointment._id, e)
-                : handleAddAppointment
+                ? selectedAppointment.patientName
+                : newAppointment.patientName
             }
-          >
-            <label>Patient Name:</label>
-            <input
-              type="text"
-              value={
-                isEditMode
-                  ? selectedAppointment.patientName
-                  : newAppointment.patientName
-              }
-              onChange={(e) =>
-                isEditMode
-                  ? setSelectedAppointment({
-                      ...selectedAppointment,
-                      patientName: e.target.value,
-                    })
-                  : setNewAppointment({
-                      ...newAppointment,
-                      patientName: e.target.value,
-                    })
-              }
-            />
-            <label>Doctor Name:</label>
-            <input
-              type="text"
-              value={
-                isEditMode
-                  ? selectedAppointment.doctorName
-                  : newAppointment.doctorName
-              }
-              onChange={(e) =>
-                isEditMode
-                  ? setSelectedAppointment({
-                      ...selectedAppointment,
-                      doctorName: e.target.value,
-                    })
-                  : setNewAppointment({
-                      ...newAppointment,
-                      doctorName: e.target.value,
-                    })
-              }
-            />
-            <label>Date:</label>
-            <input
-              type="date"
-              value={
-                isEditMode ? selectedAppointment.date : newAppointment.date
-              }
-              onChange={(e) =>
-                isEditMode
-                  ? setSelectedAppointment({
-                      ...selectedAppointment,
-                      date: e.target.value,
-                    })
-                  : setNewAppointment({
-                      ...newAppointment,
-                      date: e.target.value,
-                    })
-              }
-            />
-            <button type="submit">
-              {isEditMode ? 'Update Appointment' : 'Add Appointment'}
-            </button>
-          </form>
-        </div>
+            onChange={(e) =>
+              isEditMode
+                ? setSelectedAppointment({
+                    ...selectedAppointment,
+                    patientName: e.target.value,
+                  })
+                : setNewAppointment({
+                    ...newAppointment,
+                    patientName: e.target.value,
+                  })
+            }
+          />
+          <label>Doctor Name:</label>
+          <input
+            type="text"
+            value={
+              isEditMode
+                ? selectedAppointment.doctorName
+                : newAppointment.doctorName
+            }
+            onChange={(e) =>
+              isEditMode
+                ? setSelectedAppointment({
+                    ...selectedAppointment,
+                    doctorName: e.target.value,
+                  })
+                : setNewAppointment({
+                    ...newAppointment,
+                    doctorName: e.target.value,
+                  })
+            }
+          />
+          <label>Date:</label>
+          <input
+            type="date"
+            value={isEditMode ? selectedAppointment.date : newAppointment.date}
+            onChange={(e) =>
+              isEditMode
+                ? setSelectedAppointment({
+                    ...selectedAppointment,
+                    date: e.target.value,
+                  })
+                : setNewAppointment({
+                    ...newAppointment,
+                    date: e.target.value,
+                  })
+            }
+          />
+          <button type="submit">
+            {isEditMode ? 'Update Appointment' : 'Add Appointment'}
+          </button>
+        </form>
       </div>
-      <div className="appointments">
-        <h3>Appointments ({appointments.length})</h3>
+
+      <div className="appointments-section">
+        <h3 style={{ textAlign: 'center' }}>
+          Appointments ({appointments.length})
+        </h3>
         <div className="appointment-list">
           {appointments.map((appointment) => (
             <AppointmentCard
