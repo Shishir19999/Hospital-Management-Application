@@ -122,7 +122,7 @@ const Doctors = () => {
         </form>
       </div>
       <div className="doctors-section  ">
-        <h3>Doctors({doctors.length}) </h3>
+        <h3 style={{ textAlign: 'center' }}>Doctors({doctors.length}) </h3>
         <div className="doctor-list">
           {doctors.map((doctor) => (
             <DoctorCard
