@@ -16,7 +16,7 @@ const App = () => {
   return (
     <Router>
       <div className="container">
-        <h1 style={{ color: 'green' }}>GFG- Hospital Managment App</h1>
+        <h1 style={{ color: 'green' }}>Hospital Managment App</h1>
         <nav>
           <ul>
             <li className={isLinkActive('/appointments') ? 'active' : ''}>

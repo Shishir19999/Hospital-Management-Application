@@ -6,24 +6,26 @@
     margin-bottom: 16px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease-in-out;
- 
-    &:hover {
-        transform: scale(1.02);
-    }
- 
-    p {
-        margin: 0;
-    }
- 
-    button {
-        margin-top: 8px;
-        cursor: pointer;
-    }
-}
- 
-/* Add the form section styles */
- 
-.form-sections {
+    line-height: 0.1;
+  }
+  .doctor-card:hover {
+    transform: scale(1.02);
+  }
+  .doctor-card p {
+    margin: 0;
+  }
+  .btn-container{
+    margin-top:15px ;
+  }
+  .doctor-card button {
+    margin-top: 8px;
+    cursor: pointer;
+  }
+  /* Add the form section styles */
+  .main-doc-container{
+    display: flex;
+  }
+  .form-sections {
     background-color: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -31,42 +33,35 @@
     width: 45%;
     margin-bottom: 306px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
- 
-    h4 {
-        margin-bottom: 16px;
-        text-align: center;
-    }
- 
-    form {
-        display: flex;
-        flex-direction: column;
- 
-        label {
-            margin-bottom: 8px;
-        }
- 
-        input {
-            padding: 8px;
-            margin-bottom: 16px;
-        }
- 
-        button {
-            align-self: flex-start;
-            padding: 8px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
- 
-            &:hover {
-                background-color: #0056b3;
-            }
-        }
-    }
-}
- 
-button {
+  }
+  .form-sections h4 {
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .form-sections form {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-sections form label {
+    margin-bottom: 8px;
+  }
+  .form-sections form input {
+    padding: 8px;
+    margin-bottom: 16px;
+  }
+  .form-sections form button {
+    align-self: flex-start;
+    padding: 8px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .form-sections form button:hover {
+    background-color: #0056b3;
+  }
+  button {
     margin-top: 8px;
     cursor: pointer;
     background-color: #007bff;
@@ -75,14 +70,15 @@ button {
     border-radius: 4px;
     padding: 8px;
     cursor: pointer;
- 
-    &:hover {
-        background-color: #0056b3;
-    }
-}
- 
-.btn-container {
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  .btn-container {
     display: flex;
     justify-content: space-between;
     width: 100%;
-}
+  }
+  .doctors-section {
+    width: 45%;
+  }

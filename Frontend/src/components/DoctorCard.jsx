@@ -5,8 +5,10 @@ const DoctorCard = ({ doctor, onEdit, onDelete }) => {
   return (
     <div className="doctor-card">
       <p>
-        {doctor.name} -{doctor.specialty}
+        <h4>{doctor.name} </h4>
+        <p>Specialist: {doctor.specialty}</p>
       </p>
+     
       <div className="btn-container">
         <button onClick={() => onEdit(doctor)}>Edit</button>
         <button onClick={() => onDelete(doctor._id)}>Delete</button>
