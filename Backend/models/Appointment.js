@@ -1,10 +1,9 @@
 import mongoose from "mongoose"
 const Schema = mongoose.Schema;
 const appointmentSchema = new Schema({
-    patientName: { type: String, required: true },
-    doctorName: { type: String, required: true },
+    patient: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
+    doctor: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
     date: { type: Date, required: true },
-    // Add more fields as needed
 });
  
 const Appointment =

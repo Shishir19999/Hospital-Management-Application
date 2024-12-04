@@ -1,7 +1,7 @@
 import React from 'react';
 import '../CSS/Appointment.css';
 
-const AppointmentCard = ({ appointment, onEdit, onDelete }) => {
+const AppointmentCard = ({ appointment, onEdit, onDelete,onViewHistory }) => {
   return (
     <div className="appointment-card">
       <p>
@@ -16,6 +16,7 @@ const AppointmentCard = ({ appointment, onEdit, onDelete }) => {
       <div className="btn-container">
         <button onClick={() => onEdit(appointment)}>Edit</button>
         <button onClick={() => onDelete(appointment._id)}>Delete</button>
+        <button onClick={() => onViewHistory(appointment._id)}>View History</button>
       </div>
     </div>
   );
