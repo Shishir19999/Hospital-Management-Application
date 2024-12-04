@@ -54,17 +54,21 @@ router.route('/update/:id')
     });
  
 // Delete doctor by ID
-router.route('/delete/:id').delete((req, res) => {
-    Doctor.findByIdAndDelete(req.params.id)
-        .then(doctor => {
-            if (!doctor) {
-                return res.status(404)
-                    .json('Doctor not found');
-            }
-            res.json('Doctor deleted!');
-        })
-        .catch(err => res.status(400)
-            .json('Error: ' + err));
+router.route('/delete/:id').delete(async (req, res) => {
+    try {
+        const doctor = await Doctor.findByIdAndDelete(req.params.id);
+        if (!doctor) {
+            return res.status(404).json('Doctor not found');
+        }
+
+        // Optional: Clear doctor references in patients or appointments
+        await Patient.updateMany({ doctor: doctor._id }, { $unset: { doctor: "" } });
+
+        res.json('Doctor deleted!');
+    } catch (err) {
+        res.status(400).json('Error: ' + err);
+    }
 });
+
  
 export default router;

@@ -30,7 +30,6 @@ router.route('/add')
 // Update patient data
 router.route('/update/:id')
     .post((req, res) => {
-        console.log('hihhhhiuhiihihiuhiuh');
  
         Patient.findById(req.params.id)
             .then(patient => {
@@ -53,18 +52,21 @@ router.route('/update/:id')
     });
  
 // Delete patient by ID
-router.route('/delete/:id')
-    .delete((req, res) => {
-        Patient.findByIdAndDelete(req.params.id)
-            .then(patient => {
-                if (!patient) {
-                    return res.status(404)
-                        .json('Patient not found');
-                }
-                res.json('Patient deleted!');
-            })
-            .catch(err => res.status(400)
-                .json('Error: ' + err));
-    });
+router.route('/delete/:id').delete(async (req, res) => {
+    try {
+        const patient = await Patient.findByIdAndDelete(req.params.id);
+        if (!patient) {
+            return res.status(404).json('Patient not found');
+        }
+
+        // Delete appointments associated with this patient
+        await Appointment.deleteMany({ patient: patient._id });
+
+        res.json('Patient deleted!');
+    } catch (err) {
+        res.status(400).json('Error: ' + err);
+    }
+});
+
  
 export default router;

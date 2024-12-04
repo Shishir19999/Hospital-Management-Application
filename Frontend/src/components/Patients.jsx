@@ -9,7 +9,10 @@ const Patients = () => {
     name: '',
     age: '',
     gender: '',
+    
   });
+  const [history, setHistory] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -32,6 +35,21 @@ const Patients = () => {
       })
       .catch((error) => console.error('Error adding patient:', error));
   };
+  const handleViewHistory = (patient) => {
+    axios
+      .get(`http://localhost:8080/patients/${patient._id}/history`)
+      .then((response) => {
+        setHistory(response.data);
+        setSelectedPatient(patient);
+        setShowHistoryModal(true); // Show modal
+      })
+      .catch((error) => console.error('Error fetching patient history:', error));
+  };
+  const handleCloseHistoryModal = () => {
+    setHistory(null);
+    setSelectedPatient(null);
+    setShowHistoryModal(false);
+  };
 
   const handleUpdatePatient = (id, e) => {
     e.preventDefault();
@@ -51,7 +69,7 @@ const Patients = () => {
         );
 
         setSelectedPatient(null);
-        setIsEditMode(false); // Switch back to Add mode
+        setIsEditMode(false); 
       })
       .catch((error) => console.error('Error updating patient:', error));
   };
@@ -69,7 +87,7 @@ const Patients = () => {
 
   const handleEditPatient = (patient) => {
     setSelectedPatient(patient);
-    setIsEditMode(true); // Switch to Edit mode
+    setIsEditMode(true); 
   };
 
   return (
@@ -118,27 +136,34 @@ const Patients = () => {
           />
           <br />
           <label>Gender: </label>
-          <input
-            type="text"
-            value={isEditMode ? selectedPatient.gender : newPatient.gender}
-            onChange={(e) =>
-              isEditMode
-                ? setSelectedPatient({
-                    ...selectedPatient,
-                    gender: e.target.value,
-                  })
-                : setNewPatient({
-                    ...newPatient,
-                    gender: e.target.value,
-                  })
-            }
-          />
-          <br />
-          <button type="submit">
-            {isEditMode ? 'Update Patient' : 'Add Patient'}
-          </button>
-        </form>
-      </div>
+<select
+  value={isEditMode ? selectedPatient.gender : newPatient.gender}
+  onChange={(e) =>
+    isEditMode
+      ? setSelectedPatient({
+          ...selectedPatient,
+          gender: e.target.value,
+        })
+      : setNewPatient({
+          ...newPatient,
+          gender: e.target.value,
+        })
+  }
+>
+  <option value="" disabled>
+    Select Gender
+  </option>
+  <option value="Male">Male</option>
+  <option value="Female">Female</option>
+  <option value="Other">Other</option>
+</select>
+
+<br />
+ <button type="submit">
+    {isEditMode ? 'Update Patient' : 'Add Patient'}
+   </button>
+  </form>
+    </div>
 
       <div className="patients-section  ">
         <h3 style={{ textAlign: 'center' }}>Patients ({patients.length})</h3>
@@ -150,11 +175,22 @@ const Patients = () => {
               patient={patient}
               onEdit={handleEditPatient}
               onDelete={handleDeletePatient}
+              onViewHistory={handleViewHistory}
             />
           ))}
         </div>
       </div>
+      {showHistoryModal && (
+        <div className="patient-history-modal">
+          <div className="modal-content">
+            <h4>History for {selectedPatient?.name}</h4>
+            <pre>{JSON.stringify(history, null, 2)}</pre>
+            <button onClick={handleCloseHistoryModal}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
+    
   );
 };
 

@@ -7,7 +7,7 @@ const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [newAppointment, setNewAppointment] = useState({
     patientName: '',
-    doctorName: '',
+    doctorName: '', 
     date: '',
   });
   const [selectedAppointment, setSelectedAppointment] = useState(null);
