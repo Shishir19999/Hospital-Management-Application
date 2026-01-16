@@ -1,0 +1,13 @@
+{
+  "name": "mern-hospital-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "client": "npm run dev --prefix Frontend",
+    "server": "npm run dev --prefix Backend",
+    "dev": "concurrently -k -n SERVER,CLIENT -c green,blue \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
