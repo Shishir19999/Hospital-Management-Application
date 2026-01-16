@@ -14,49 +14,95 @@ router.route('/').get((req, res) => {
 });
 
 // Add new appointment
+// Add new appointment with validations
 router.route('/add').post(async (req, res) => {
     const { patient, doctor, date } = req.body;
 
     try {
+        // 1️⃣ Validate patient exists
         const existingPatient = await Patient.findById(patient);
         if (!existingPatient) {
-            return res.status(404).json('Patient not found');
+            return res.status(404).json({ error: 'Patient not found' });
         }
-        const newAppointment = new Appointment({ patient, doctor, date });
+
+        // 2️⃣ Validate doctor exists
+        const existingDoctor = await Doctor.findById(doctor);
+        if (!existingDoctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+
+        // 3️⃣ Validate appointment date is in the future
+        const appointmentDate = new Date(date);
+        const now = new Date();
+        if (appointmentDate <= now) {
+            return res.status(400).json({ error: 'Appointment date must be in the future' });
+        }
+
+        // 4️⃣ Create the appointment
+        const newAppointment = new Appointment({ patient, doctor, date: appointmentDate });
         const savedAppointment = await newAppointment.save();
 
-        // Add patient to doctor's history
-        const doctorRecord = await Doctor.findById(doctor);
-        if (doctorRecord && !doctorRecord.history.includes(patient)) {
-            doctorRecord.history.push(patient);
-            await doctorRecord.save();
+        // 5️⃣ Add patient to doctor's history (optional)
+        if (!existingDoctor.history.includes(patient)) {
+            existingDoctor.history.push(patient);
+            await existingDoctor.save();
         }
 
         res.json(savedAppointment);
     } catch (err) {
-        res.status(400).json('Error: ' + err);
+        res.status(400).json({ error: err.message });
     }
 });
 
-// Update appointment
+// Update appointment with validations
 router.route('/update/:id').post(async (req, res) => {
-    const { patient, doctor, date } = req.body;
+  const { patient, doctor, date } = req.body;
 
-    try {
-        const appointment = await Appointment.findById(req.params.id);
-        if (!appointment) {
-            return res.status(404).json('Appointment not found');
-        }
-
-        appointment.patient = patient;
-        appointment.doctor = doctor;
-        appointment.date = date;
-
-        await appointment.save();
-        res.json('Appointment updated!');
-    } catch (err) {
-        res.status(400).json('Error: ' + err);
+  try {
+    // 1️⃣ Find appointment
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
     }
+
+    // 2️⃣ Validate patient exists
+    const existingPatient = await Patient.findById(patient);
+    if (!existingPatient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    // 3️⃣ Validate doctor exists
+    const existingDoctor = await Doctor.findById(doctor);
+    if (!existingDoctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    // 4️⃣ Validate appointment date is in the future
+    const appointmentDate = new Date(date);
+    if (appointmentDate <= new Date()) {
+      return res.status(400).json({ error: 'Appointment date must be in the future' });
+    }
+
+    // 5️⃣ Update appointment
+    appointment.patient = patient;
+    appointment.doctor = doctor;
+    appointment.date = appointmentDate;
+    const updatedAppointment = await appointment.save();
+
+    // 6️⃣ Optional: update doctor history
+    if (!existingDoctor.history.includes(patient)) {
+      existingDoctor.history.push(patient);
+      await existingDoctor.save();
+    }
+
+    // 7️⃣ Populate patient and doctor before sending back
+    await updatedAppointment.populate('patient', 'name age gender');
+    await updatedAppointment.populate('doctor', 'name specialty');
+
+    res.json(updatedAppointment);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Delete appointment

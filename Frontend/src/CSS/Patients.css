@@ -1,14 +1,28 @@
+
 .patient-main {
     display: flex;
+    margin-top:20px;
+     justify-content: center;
+    
   }
-  .form-sections {
-    width: 45%;
+ 
+  .Add-editPatientTitle {
+  width:100%;
     margin-right: 20px;
-    height: 400px;
   }
-  .patients-section {
-    width: 45%;
+  .Patient-List{
+    width:100%;
+    margin-right: 20px;
+    /* height: 400px; */
   }
+  .form-sections{
+    width:90%;
+  }
+  .patient-main h3{
+    margin: 10px 0;
+    text-align: left;
+  }
+  
   .patient-card {
     line-height: 0.6;
     background-color: #fff;
@@ -29,6 +43,7 @@
     margin: 8px 0;
   }
   .patient-card button {
+    width:31%;
     margin-top: 2px;
     cursor: pointer;
     background-color: #007bff;
@@ -39,6 +54,78 @@
     cursor: pointer;
   }
   .patient-card button:hover {
-    background-color: #0056b3;
+    background-color: #2e9b03;
   }
-  
+  /* ===== MODAL BACKDROP ===== */
+.patient-history-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* ===== MODAL BOX ===== */
+.modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 25px;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 95%;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.25s ease-in-out;
+}
+
+/* ===== CLOSE BUTTON ===== */
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.close-btn:hover {
+  background: #b52a37;
+}
+
+/* ===== TABLE ===== */
+.modal-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.modal-content th,
+.modal-content td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.modal-content th {
+  background-color: #f4f4f4;
+}
+
+/* ===== ANIMATION ===== */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
