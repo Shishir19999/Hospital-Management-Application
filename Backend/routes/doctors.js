@@ -1,6 +1,8 @@
 import express from "express"
 const router = express.Router();
 import Doctor from '../models/Doctor.js';
+import Patient from "../models/Patient.js";
+import Appointment from "../models/Appointment.js";
  
 // Get all doctors
 router.route('/').get((req, res) => {
@@ -69,6 +71,27 @@ router.route('/delete/:id').delete(async (req, res) => {
         res.status(400).json('Error: ' + err);
     }
 });
+
+// Get patient history for a doctor
+router.route('/:doctorId/patient-history').get(async (req, res) => {
+  const { doctorId } = req.params;
+
+  try {
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    const appointments = await Appointment.find({ doctor: doctorId })
+      .populate('patient', 'name age gender')
+      .sort({ date: -1 });
+
+    res.json(appointments);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 
  
 export default router;
