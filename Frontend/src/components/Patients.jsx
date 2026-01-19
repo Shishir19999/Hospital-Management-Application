@@ -6,10 +6,10 @@ import PatientCard from './PatientCard';
 const Patients = () => {
   const [patients, setPatients] = useState([]);
   const [newPatient, setNewPatient] = useState({ name: '', age: '', gender: '' });
-  const [history, setHistory] = useState([]);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Fetch patients
   useEffect(() => {
@@ -24,7 +24,6 @@ const Patients = () => {
     if (!newPatient.name || !newPatient.age || !newPatient.gender) {
       return alert('All fields are required');
     }
-
     axios.post('http://localhost:8080/patients/add', newPatient)
       .then(res => {
         setPatients([...patients, res.data]);
@@ -39,7 +38,6 @@ const Patients = () => {
     if (!selectedPatient.name || !selectedPatient.age || !selectedPatient.gender) {
       return alert('All fields are required');
     }
-
     axios.post(`http://localhost:8080/patients/update/${id}`, selectedPatient)
       .then(() => {
         setPatients(patients.map(p => p._id === id ? { ...selectedPatient, _id: id } : p));
@@ -62,7 +60,7 @@ const Patients = () => {
     setIsEditMode(true);
   };
 
-  // View patient history
+  // View history
   const handleViewHistory = (patient) => {
     if (!patient?._id) return alert('Patient ID not found');
 
@@ -82,105 +80,99 @@ const Patients = () => {
   };
 
   return (
-    
     <div className="patient-main">
-       <div className="Add-editPatientTitle"> <h3>{isEditMode ? 'Edit Patient' : 'Add New Patient'}</h3>
-     <div className="form-main">
-      <div className="form-sections">
-        <form onSubmit={isEditMode ? (e) => handleUpdatePatient(selectedPatient._id, e) : handleAddPatient}>
-          <label>Name:</label>
-          <input
-            type="text"
-            value={isEditMode ? selectedPatient.name : newPatient.name}
-            onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, name: e.target.value }) : setNewPatient({ ...newPatient, name: e.target.value })}
-          /><br/>
+      <div className="Add-editPatientTitle">
+        <h3>{isEditMode ? 'Edit Patient' : 'Add New Patient'}</h3>
+        <div className="form-main">
+          <div className="form-sections">
+            <form onSubmit={isEditMode ? (e) => handleUpdatePatient(selectedPatient._id, e) : handleAddPatient}>
+              
+              <div className="form-row">
+                <label>Name:</label>
+                <input
+                  type="text"
+                  value={isEditMode ? selectedPatient.name : newPatient.name}
+                  onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, name: e.target.value }) : setNewPatient({ ...newPatient, name: e.target.value })}
+                />
+              </div>
 
-          <label>Age:</label>
-          <input
-            type="number"
-            value={isEditMode ? selectedPatient.age : newPatient.age}
-            onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, age: e.target.value }) : setNewPatient({ ...newPatient, age: e.target.value })}
-          /><br/>
+              <div className="form-row">
+                <label>Age:</label>
+                <input
+                  type="number"
+                  value={isEditMode ? selectedPatient.age : newPatient.age}
+                  onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, age: e.target.value }) : setNewPatient({ ...newPatient, age: e.target.value })}
+                />
+              </div>
 
-          <label>Gender:</label>
-          <select
-            value={isEditMode ? selectedPatient.gender : newPatient.gender}
-            onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, gender: e.target.value }) : setNewPatient({ ...newPatient, gender: e.target.value })}
-          >
-            <option value="" disabled>Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select><br/>
+              <div className="form-row">
+                <label>Gender:</label>
+                <select
+                  value={isEditMode ? selectedPatient.gender : newPatient.gender}
+                  onChange={e => isEditMode ? setSelectedPatient({ ...selectedPatient, gender: e.target.value }) : setNewPatient({ ...newPatient, gender: e.target.value })}
+                >
+                  <option value="" disabled>Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
 
-          <button type="submit">{isEditMode ? 'Update Patient' : 'Add Patient'}</button>
-        </form>
-      </div>
-</div>
-</div>
-      {/* Patient List */}
-      <div className="Patient-List">
-      <h3>Patient List ({patients.length})</h3>
-      <div className="patients-section">
-        
-        <div className="patient-list">
-          {patients.map(patient => (
-            <PatientCard
-              key={patient._id}
-              patient={patient}
-              onEdit={handleEditPatient}
-              onDelete={handleDeletePatient}
-              onViewHistory={handleViewHistory}
-            />
-          ))}
+              <button type="submit">{isEditMode ? 'Update Patient' : 'Add Patient'}</button>
+            </form>
+          </div>
         </div>
       </div>
-</div>
+
+      {/* Patient List */}
+      <div className="Patient-List">
+        <h3>Patient List ({patients.length})</h3>
+        <div className="patients-section">
+          <div className="patient-list">
+            {patients.map(patient => (
+              <PatientCard
+                key={patient._id}
+                patient={patient}
+                onEdit={handleEditPatient}
+                onDelete={handleDeletePatient}
+                onViewHistory={handleViewHistory}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* History Modal */}
       {showHistoryModal && (
-  <div
-    className="patient-history-modal"
-    onClick={handleCloseHistoryModal}
-  >
-    <div
-      className="modal-content"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <h4>History for {selectedPatient?.name}</h4>
-
-      <button className="close-btn" onClick={handleCloseHistoryModal}>
-        ✕
-      </button>
-
-      {history.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Doctor</th>
-              <th>Specialty</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map(h => (
-              <tr key={h._id}>
-                <td>{h.doctor?.name || '-'}</td>
-                <td>{h.doctor?.specialty || '-'}</td>
-                <td>{new Date(h.date).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>No appointment history found.</p>
+        <div className="patient-history-modal" onClick={handleCloseHistoryModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h4>History for {selectedPatient?.name}</h4>
+            <button className="close-btn" onClick={handleCloseHistoryModal}>✕</button>
+            {history.length > 0 ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Doctor</th>
+                    <th>Specialty</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map(h => (
+                    <tr key={h._id}>
+                      <td>{h.doctor?.name || '-'}</td>
+                      <td>{h.doctor?.specialty || '-'}</td>
+                      <td>{new Date(h.date).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <p>No appointment history found.</p>}
+          </div>
+        </div>
       )}
-    </div>
-  </div>
-)}
 
-    
     </div>
-    
   );
 };
 

@@ -96,56 +96,72 @@ const Doctors = () => {
 
   return (
     <div className="main-doc-container">
-      {/* Form section */}
-      <div className="form-sections">
-        <h4>{isEditMode ? 'Edit Doctor' : 'Add New Doctor'}</h4>
-        <form
-          onSubmit={
-            isEditMode
-              ? (e) => handleUpdateDoctor(selectedDoctor._id, e)
-              : handleAddDoctor
-          }
-        >
-          <label>Name: </label>
-          <input
-            type="text"
-            value={isEditMode ? selectedDoctor.name : newDoctor.name}
-            onChange={(e) =>
-              isEditMode
-                ? setSelectedDoctor({ ...selectedDoctor, name: e.target.value })
-                : setNewDoctor({ ...newDoctor, name: e.target.value })
-            }
-          />
-          <br />
+      {/* Add/Edit Doctor Form */}
+      <div className="Add-editDoctorTitle">
+        <h3>{isEditMode ? 'Edit Doctor' : 'Add New Doctor'}</h3>
+        <div className="form-main">
+          <div className="form-sections">
+            <form
+              onSubmit={
+                isEditMode
+                  ? (e) => handleUpdateDoctor(selectedDoctor._id, e)
+                  : handleAddDoctor
+              }
+              className="doctor-form"
+            >
+              <div className="form-row">
+                <label>Name:</label>
+                <input
+                  type="text"
+                  value={isEditMode ? selectedDoctor.name : newDoctor.name}
+                  onChange={(e) =>
+                    isEditMode
+                      ? setSelectedDoctor({
+                          ...selectedDoctor,
+                          name: e.target.value,
+                        })
+                      : setNewDoctor({ ...newDoctor, name: e.target.value })
+                  }
+                  placeholder="Enter doctor's name"
+                />
+              </div>
 
-          <label>Specialty: </label>
-          <select
-            value={isEditMode ? selectedDoctor.specialty : newDoctor.specialty}
-            onChange={(e) =>
-              isEditMode
-                ? setSelectedDoctor({ ...selectedDoctor, specialty: e.target.value })
-                : setNewDoctor({ ...newDoctor, specialty: e.target.value })
-            }
-          >
-            <option value="">--Select Specialty--</option>
-            {SPECIALTIES.map((spec) => (
-              <option key={spec} value={spec}>
-                {spec}
-              </option>
-            ))}
-          </select>
-          <br />
+              <div className="form-row">
+                <label>Specialty:</label>
+                <select
+                  value={
+                    isEditMode ? selectedDoctor.specialty : newDoctor.specialty
+                  }
+                  onChange={(e) =>
+                    isEditMode
+                      ? setSelectedDoctor({
+                          ...selectedDoctor,
+                          specialty: e.target.value,
+                        })
+                      : setNewDoctor({ ...newDoctor, specialty: e.target.value })
+                  }
+                >
+                  <option value="">--Select Specialty--</option>
+                  {SPECIALTIES.map((spec) => (
+                    <option key={spec} value={spec}>
+                      {spec}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <button type="submit">
-            {isEditMode ? 'Update Doctor' : 'Add Doctor'}
-          </button>
-        </form>
+              <button type="submit">
+                {isEditMode ? 'Update Doctor' : 'Add Doctor'}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
 
-      {/* Doctor list section */}
-      <div className="doctors-section">
-        <h3 style={{ textAlign: 'center' }}>Doctors({doctors.length})</h3>
-        <div className="doctor-list">
+      {/* Doctor List */}
+      <div className="doctor-list">
+        <h3>Doctor List ({doctors.length})</h3>
+        <div className="doctors-section">
           {doctors.map((doctor) => (
             <DoctorCard
               key={doctor._id}
@@ -160,7 +176,10 @@ const Doctors = () => {
 
       {/* Patient History Modal */}
       {showHistoryModal && (
-        <div className="doctor-history-modal" onClick={handleCloseHistoryModal}>
+        <div
+          className="doctor-history-modal"
+          onClick={handleCloseHistoryModal}
+        >
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
