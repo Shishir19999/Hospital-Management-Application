@@ -1,110 +1,93 @@
-.doctor-card {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease-in-out;
-    line-height: 0.1;
-  }
-  .doctor-card:hover {
-    transform: scale(1.02);
-  }
-  .doctor-card p {
-    margin: 0;
-  }
-  .btn-container{
-    margin-top:15px ;
-  }
-  .doctor-card button {
-    margin-top: 8px;
-    cursor: pointer;
-  }
-  /* Add the form section styles */
-  .main-doc-container{
-    display: flex;
-  }
-  .form-sections {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px;
-    width: 45%;
-    margin-bottom: 306px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  .form-sections h4 {
-    margin-bottom: 16px;
-    text-align: center;
-  }
-  .form-sections form {
-    display: flex;
-    flex-direction: column;
-  }
-  .form-sections form label {
-    margin-bottom: 8px;
-  }
-  .form-sections form input {
-    padding: 8px;
-    margin-bottom: 16px;
-  }
-  .form-sections form button {
-    align-self: flex-start;
-    padding: 8px;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .form-sections form button:hover {
-    background-color: #0056b3;
-  }
-  button {
-    margin-top: 8px;
-    cursor: pointer;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 8px;
-    cursor: pointer;
-  }
-  button:hover {
-    background-color: #0056b3;
-  }
-  .btn-container {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-  }
-  .doctors-section {
-    width: 45%;
-  }
+/* ===== MAIN LAYOUT ===== */
+.main-doc-container {
+  display: flex;
+  margin-top: 20px;
+  justify-content: center;
+}
 
-  /* ===== MODAL BACKDROP ===== */
+.Add-editDoctorTitle {
+  width: 100%;
+  margin-right: 20px;
+}
+
+.doctor-list {
+  width: 100%;
+  margin-right: 20px;
+}
+
+/* ===== DOCTOR FORM ===== */
+.doctor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+
+
+/* ===== DOCTOR CARD ===== */
+.doctor-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease-in-out;
+  line-height: 1.2;
+}
+
+.doctor-card:hover {
+  transform: scale(1.02);
+}
+
+.doctor-card h4 {
+  margin-bottom: 8px;
+}
+
+.doctor-card p {
+  margin: 8px 0;
+}
+
+.btn-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.doctor-card button {
+  width: 31%;
+  padding: 8px;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  background-color: #007bff;
+  cursor: pointer;
+}
+
+.doctor-card button:hover {
+  background-color: #2e9b03;
+}
+
+/* ===== MODAL ===== */
 .doctor-history-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0,0,0,0.45);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
 }
 
-/* ===== MODAL BOX ===== */
 .modal-content {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.95);
   padding: 20px 25px;
   border-radius: 12px;
-  width: 520px;
+  width: 500px;
   max-width: 95%;
   position: relative;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   animation: modalFadeIn 0.25s ease-in-out;
 }
 

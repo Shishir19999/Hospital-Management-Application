@@ -5,6 +5,78 @@
   background-color: #F5EEE6;
 
 }
+.form-sections {
+  background-color: #fff; /* box background */
+  border: 1px solid #ddd; /* border around box */
+  border-radius: 8px;
+  padding: 20px; /* add padding so inputs aren't stuck to edges */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box; /* include padding in width */
+  min-height: fit-content;
+}
+ /* Form alignment */
+.form-sections form {
+ 
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+gap: 20px
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+}
+
+.form-row label {
+  width: 120px; /* fixed width for alignment */
+  text-align: left;
+  margin-right: 12px;
+  font-weight: 500;
+}
+
+.form-row input,
+.form-row select {
+  margin-left: -50px;
+  flex: 1;
+  padding: 10px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+}
+
+.form-sections button {
+  margin-top: 70px;
+justify-content: center;  
+padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.form-sections button:hover {
+  background-color: #0056b3;
+}
+
+.form-sections button:active {
+  transform: scale(0.97);
+}
+
 
 
 nav {
