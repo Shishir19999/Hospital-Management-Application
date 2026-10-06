@@ -8,6 +8,12 @@
     "dev": "concurrently -k -n SERVER,CLIENT -c green,blue \"npm run server\" \"npm run client\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^10.0.5"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "overrides": {
+    "shell-quote": "^1.12.0"
   }
 }

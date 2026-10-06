@@ -1,62 +1,83 @@
 import express from "express"
+import mongoose from "mongoose";
 const router = express.Router();
 import Doctor from '../models/Doctor.js';
 import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
- 
-// Get all doctors
-router.route('/').get((req, res) => {
-    Doctor.find()
-        .then(doctors =>
-            res.json(doctors))
-        .catch(err =>
-            res.status(400)
-                .json('Error: ' + err));
+import { requireRole } from "../middleware/auth.js";
+import { parsePaging, paginate, escapeRegex } from "../utils/paginate.js";
+
+// Read: any authenticated role. Create/update/delete: admin only.
+const adminOnly = requireRole('admin');
+
+function validateDoctor(body, partial) {
+    const errors = [];
+    const out = {};
+    for (const field of ['name', 'specialty']) {
+        if (!partial || body[field] !== undefined) {
+            if (typeof body[field] !== 'string' || !body[field].trim()) errors.push(`${field} is required`);
+            else out[field] = body[field].trim();
+        }
+    }
+    return { errors, out };
+}
+
+// Light, unpaginated list for dropdowns: [{ _id, name, specialty }]
+router.get('/lookup', async (req, res) => {
+    try {
+        res.json(await Doctor.find().select('name specialty').sort({ name: 1 }).limit(5000).lean());
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
 });
- 
+
+// Paginated list: ?page=1&limit=10&search=text (name or specialty)
+router.get('/', async (req, res) => {
+    try {
+        const paging = parsePaging(req.query);
+        const rx = paging.search && new RegExp(escapeRegex(paging.search), 'i');
+        const filter = rx ? { $or: [{ name: rx }, { specialty: rx }] } : {};
+        res.json(await paginate(Doctor, filter, paging, { sort: { name: 1, _id: 1 } }));
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // Add new doctor
-router.route('/add')
-    .post((req, res) => {
-        const { name, specialty } = req.body;
- 
-        const newDoctor =
-            new Doctor({ name, specialty });
- 
-        newDoctor.save()
-            // Return the savedDoctor object
-            .then(savedDoctor =>
-                res.json(savedDoctor))
-            .catch(
-                err =>
-                    res.status(400)
-                        .json('Error: ' + err));
-    });
- 
- 
-// Update doctor data
-router.route('/update/:id')
-    .post((req, res) => {
-        Doctor.findById(req.params.id)
-            .then(doctor => {
-                if (!doctor) {
-                    return res.status(404)
-                        .json('Doctor not found');
-                }
- 
-                doctor.name = req.body.name;
-                doctor.specialty = req.body.specialty;
- 
-                doctor.save()
-                    .then(() => res.json('Doctor updated!'))
-                    .catch(err => res.status(400)
-                        .json('Error: ' + err));
-            })
-            .catch(err => res.status(400)
-                .json('Error: ' + err));
-    });
- 
+router.post('/add', adminOnly, async (req, res) => {
+    const { errors, out } = validateDoctor(req.body || {}, false);
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+    try {
+        const savedDoctor = await new Doctor(out).save();
+        res.json(savedDoctor);
+    } catch (err) {
+        res.status(400).json('Error: ' + err);
+    }
+});
+
+// Update doctor data. PUT/PATCH accept partial bodies; POST /update/:id kept for older clients.
+const updateDoctor = async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid ID' });
+    try {
+        const doctor = await Doctor.findById(req.params.id);
+        if (!doctor) return res.status(404).json('Doctor not found');
+
+        const { errors, out } = validateDoctor(req.body || {}, true);
+        if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+        Object.assign(doctor, out);
+        await doctor.save();
+        res.json('Doctor updated!');
+    } catch (err) {
+        res.status(400).json('Error: ' + err);
+    }
+};
+router.put('/:id', adminOnly, updateDoctor);
+router.patch('/:id', adminOnly, updateDoctor);
+router.post('/update/:id', adminOnly, updateDoctor);
+
 // Delete doctor by ID
-router.route('/delete/:id').delete(async (req, res) => {
+router.delete('/delete/:id', adminOnly, async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid ID' });
     try {
         const doctor = await Doctor.findByIdAndDelete(req.params.id);
         if (!doctor) {
@@ -75,6 +96,7 @@ router.route('/delete/:id').delete(async (req, res) => {
 // Get patient history for a doctor
 router.route('/:doctorId/patient-history').get(async (req, res) => {
   const { doctorId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(doctorId)) return res.status(400).json({ error: 'Invalid doctor ID' });
 
   try {
     const doctor = await Doctor.findById(doctorId);
@@ -92,6 +114,4 @@ router.route('/:doctorId/patient-history').get(async (req, res) => {
   }
 });
 
-
- 
 export default router;

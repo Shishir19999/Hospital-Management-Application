@@ -1,4 +1,3 @@
-import React from 'react';
 import '../CSS/Doctors.css';
 
 const DoctorCard = ({ doctor, onEdit, onDelete, onViewPatientsHistory }) => (

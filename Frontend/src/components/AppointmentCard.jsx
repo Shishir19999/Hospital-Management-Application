@@ -1,4 +1,3 @@
-import React from 'react';
 import '../CSS/Appointment.css';
 
 const AppointmentCard = ({ appointment, onEdit, onDelete, onViewHistory }) => {
@@ -12,7 +11,7 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onViewHistory }) => {
         {appointment.doctor?.specialty || 'N/A'})
       </p>
       <p>
-        <span>Date:</span> {new Date(appointment.date).toLocaleDateString()}
+        <span>Date:</span> {new Date(appointment.date).toLocaleString()}
       </p>
       <div className="btn-container">
         <button onClick={() => onEdit(appointment)}>Edit</button>
