@@ -1,24 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_URL } from '../api/config';
 import DoctorCard from './DoctorCard';
 import '../CSS/Doctors.css';
 import { SPECIALTIES } from './Constants';
+import Pagination from './Pagination';
+import { EMPTY_META } from './paginationMeta';
+
+const PAGE_SIZE = 9;
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
+  const [meta, setMeta] = useState(EMPTY_META);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [reload, setReload] = useState(0);
   const [newDoctor, setNewDoctor] = useState({ name: '', specialty: '' });
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [history, setHistory] = useState([]);
+  const [historyDoctor, setHistoryDoctor] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Fetch doctors
+  // Fetch the current page (re-runs on page/search change or after a mutation)
   useEffect(() => {
     axios
-      .get('http://localhost:8080/doctors')
-      .then((res) => setDoctors(res.data))
+      .get(`${API_URL}/doctors`, { params: { page, limit: PAGE_SIZE, search } })
+      .then((res) => {
+        const { data, ...rest } = res.data;
+        if (!data.length && rest.page > rest.pages) return setPage(rest.pages);
+        setDoctors(data);
+        setMeta(rest);
+      })
       .catch((err) => console.error('Error fetching doctors:', err));
-  }, []);
+  }, [page, search, reload]);
+
+  const refresh = () => setReload((n) => n + 1);
+  const changeSearch = useCallback((v) => { setSearch(v); setPage(1); }, []);
 
   // Disable background scroll when modal is open
   useEffect(() => {
@@ -33,9 +51,9 @@ const Doctors = () => {
       return alert('Please select a valid specialty');
     }
     axios
-      .post('http://localhost:8080/doctors/add', newDoctor)
-      .then((res) => {
-        setDoctors([...doctors, res.data]);
+      .post(`${API_URL}/doctors/add`, newDoctor)
+      .then(() => {
+        refresh();
         setNewDoctor({ name: '', specialty: '' });
       })
       .catch((err) => console.error('Error adding doctor:', err));
@@ -48,13 +66,9 @@ const Doctors = () => {
       return alert('Please select a valid specialty');
     }
     axios
-      .post(`http://localhost:8080/doctors/update/${id}`, selectedDoctor)
+      .put(`${API_URL}/doctors/${id}`, selectedDoctor)
       .then(() => {
-        setDoctors(
-          doctors.map((doc) =>
-            doc._id === id ? { ...selectedDoctor, _id: id } : doc
-          )
-        );
+        refresh();
         setSelectedDoctor(null);
         setIsEditMode(false);
       })
@@ -64,8 +78,8 @@ const Doctors = () => {
   // Delete doctor
   const handleDeleteDoctor = (id) => {
     axios
-      .delete(`http://localhost:8080/doctors/delete/${id}`)
-      .then(() => setDoctors(doctors.filter((doc) => doc._id !== id)))
+      .delete(`${API_URL}/doctors/delete/${id}`)
+      .then(() => refresh())
       .catch((err) => console.error('Error deleting doctor:', err));
   };
 
@@ -76,10 +90,12 @@ const Doctors = () => {
   };
 
   // View patient history
-  const handleViewPatientsHistory = async (doctorId) => {
+  const handleViewPatientsHistory = async (doctor) => {
+    const doctorId = doctor._id;
     try {
+      setHistoryDoctor(doctor);
       const res = await axios.get(
-        `http://localhost:8080/doctors/${doctorId}/patient-history`
+        `${API_URL}/doctors/${doctorId}/patient-history`
       );
       setHistory(res.data);
       setShowHistoryModal(true);
@@ -160,7 +176,8 @@ const Doctors = () => {
 
       {/* Doctor List */}
       <div className="doctor-list">
-        <h3>Doctor List ({doctors.length})</h3>
+        <h3>Doctor List ({meta.total})</h3>
+        <Pagination meta={meta} onPage={setPage} search={search} onSearch={changeSearch} placeholder="Search doctors..." />
         <div className="doctors-section">
           {doctors.map((doctor) => (
             <DoctorCard
@@ -184,7 +201,7 @@ const Doctors = () => {
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <h4>Patient History for {selectedDoctor?.name}</h4>
+            <h4>Patient History for {historyDoctor?.name}</h4>
 
             <button className="close-btn" onClick={handleCloseHistoryModal}>
               ✕

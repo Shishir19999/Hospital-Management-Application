@@ -1,4 +1,3 @@
-import React from 'react';
 import '../CSS/Patients.css';
 
 const PatientCard = ({ patient, onEdit, onDelete, onViewHistory }) => (

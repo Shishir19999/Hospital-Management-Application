@@ -1,22 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_URL } from '../api/config';
 import '../CSS/Patients.css';
 import PatientCard from './PatientCard';
+import Pagination from './Pagination';
+import { EMPTY_META } from './paginationMeta';
+
+const PAGE_SIZE = 9;
 
 const Patients = () => {
   const [patients, setPatients] = useState([]);
+  const [meta, setMeta] = useState(EMPTY_META);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [reload, setReload] = useState(0);
   const [newPatient, setNewPatient] = useState({ name: '', age: '', gender: '' });
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [history, setHistory] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Fetch patients
+  // Fetch the current page (re-runs on page/search change or after a mutation)
   useEffect(() => {
-    axios.get('http://localhost:8080/patients')
-      .then(res => setPatients(res.data))
+    axios.get(`${API_URL}/patients`, { params: { page, limit: PAGE_SIZE, search } })
+      .then(res => {
+        const { data, ...rest } = res.data;
+        // Deleted the last item of the last page: step back one page.
+        if (!data.length && rest.page > rest.pages) return setPage(rest.pages);
+        setPatients(data);
+        setMeta(rest);
+      })
       .catch(err => console.error('Error fetching patients:', err));
-  }, []);
+  }, [page, search, reload]);
+
+  const refresh = () => setReload(n => n + 1);
+  const changeSearch = useCallback((v) => { setSearch(v); setPage(1); }, []);
 
   // Add patient
   const handleAddPatient = (e) => {
@@ -24,12 +42,12 @@ const Patients = () => {
     if (!newPatient.name || !newPatient.age || !newPatient.gender) {
       return alert('All fields are required');
     }
-    axios.post('http://localhost:8080/patients/add', newPatient)
-      .then(res => {
-        setPatients([...patients, res.data]);
+    axios.post(`${API_URL}/patients/add`, newPatient)
+      .then(() => {
+        refresh();
         setNewPatient({ name: '', age: '', gender: '' });
       })
-      .catch(err => console.error('Error adding patient:', err));
+      .catch(err => { console.error('Error adding patient:', err); alert(err.response?.data?.error || 'Error adding patient'); });
   };
 
   // Update patient
@@ -38,9 +56,9 @@ const Patients = () => {
     if (!selectedPatient.name || !selectedPatient.age || !selectedPatient.gender) {
       return alert('All fields are required');
     }
-    axios.post(`http://localhost:8080/patients/update/${id}`, selectedPatient)
+    axios.put(`${API_URL}/patients/${id}`, selectedPatient)
       .then(() => {
-        setPatients(patients.map(p => p._id === id ? { ...selectedPatient, _id: id } : p));
+        refresh();
         setSelectedPatient(null);
         setIsEditMode(false);
       })
@@ -49,8 +67,8 @@ const Patients = () => {
 
   // Delete patient
   const handleDeletePatient = (id) => {
-    axios.delete(`http://localhost:8080/patients/delete/${id}`)
-      .then(() => setPatients(patients.filter(p => p._id !== id)))
+    axios.delete(`${API_URL}/patients/delete/${id}`)
+      .then(() => refresh())
       .catch(err => console.error('Error deleting patient:', err));
   };
 
@@ -64,7 +82,7 @@ const Patients = () => {
   const handleViewHistory = (patient) => {
     if (!patient?._id) return alert('Patient ID not found');
 
-    axios.get(`http://localhost:8080/patients/${patient._id}/history`)
+    axios.get(`${API_URL}/patients/${patient._id}/history`)
       .then(res => {
         setHistory(res.data);
         setSelectedPatient(patient);
@@ -126,7 +144,8 @@ const Patients = () => {
 
       {/* Patient List */}
       <div className="Patient-List">
-        <h3>Patient List ({patients.length})</h3>
+        <h3>Patient List ({meta.total})</h3>
+        <Pagination meta={meta} onPage={setPage} search={search} onSearch={changeSearch} placeholder="Search patients..." />
         <div className="patients-section">
           <div className="patient-list">
             {patients.map(patient => (

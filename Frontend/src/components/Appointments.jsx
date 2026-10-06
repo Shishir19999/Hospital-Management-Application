@@ -1,10 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_URL } from '../api/config';
 import AppointmentCard from './AppointmentCard.jsx';
 import '../CSS/Appointment.css';
+import Pagination from './Pagination';
+import { EMPTY_META } from './paginationMeta';
+
+const PAGE_SIZE = 9;
+
+// Format a stored date for a datetime-local input (local time, minute precision)
+const toLocalInput = (iso) => {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
+  const [meta, setMeta] = useState(EMPTY_META);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [reload, setReload] = useState(0);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [newAppointment, setNewAppointment] = useState({
@@ -15,23 +31,34 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // Fetch appointments, patients, and doctors
+  // Dropdown options come from the light, unpaginated lookup endpoints.
   useEffect(() => {
     axios
-      .get('http://localhost:8080/appointments')
-      .then((res) => setAppointments(res.data))
-      .catch((err) => console.error('Error fetching appointments:', err));
-
-    axios
-      .get('http://localhost:8080/patients')
+      .get(`${API_URL}/patients/lookup`)
       .then((res) => setPatients(res.data))
       .catch((err) => console.error('Error fetching patients:', err));
 
     axios
-      .get('http://localhost:8080/doctors')
+      .get(`${API_URL}/doctors/lookup`)
       .then((res) => setDoctors(res.data))
       .catch((err) => console.error('Error fetching doctors:', err));
   }, []);
+
+  // Fetch the current page of appointments
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/appointments`, { params: { page, limit: PAGE_SIZE, search } })
+      .then((res) => {
+        const { data, ...rest } = res.data;
+        if (!data.length && rest.page > rest.pages) return setPage(rest.pages);
+        setAppointments(data);
+        setMeta(rest);
+      })
+      .catch((err) => console.error('Error fetching appointments:', err));
+  }, [page, search, reload]);
+
+  const refresh = () => setReload((n) => n + 1);
+  const changeSearch = useCallback((v) => { setSearch(v); setPage(1); }, []);
 
   const isFutureDate = (date) => new Date(date) > new Date();
 
@@ -45,12 +72,12 @@ const Appointments = () => {
       return alert('Appointment date must be in the future.');
     }
     axios
-      .post('http://localhost:8080/appointments/add', newAppointment)
-      .then((res) => {
-        setAppointments([...appointments, res.data]);
+      .post(`${API_URL}/appointments/add`, newAppointment)
+      .then(() => {
+        refresh();
         setNewAppointment({ patient: '', doctor: '', date: '' });
       })
-      .catch((err) => console.error('Error adding appointment:', err));
+      .catch((err) => { console.error('Error adding appointment:', err); alert(err.response?.data?.error || 'Error adding appointment'); });
   };
 
   // Update appointment
@@ -63,22 +90,20 @@ const Appointments = () => {
       return alert('Appointment date must be in the future.');
     }
     axios
-      .post(`http://localhost:8080/appointments/update/${id}`, selectedAppointment)
-      .then((res) => {
-        setAppointments(
-          appointments.map((app) => (app._id === id ? res.data : app))
-        );
+      .put(`${API_URL}/appointments/${id}`, selectedAppointment)
+      .then(() => {
+        refresh();
         setSelectedAppointment(null);
         setIsEditMode(false);
       })
-      .catch((err) => console.error('Error updating appointment:', err));
+      .catch((err) => { console.error('Error updating appointment:', err); alert(err.response?.data?.error || 'Error updating appointment'); });
   };
 
   // Delete appointment
   const handleDeleteAppointment = (id) => {
     axios
-      .delete(`http://localhost:8080/appointments/delete/${id}`)
-      .then(() => setAppointments(appointments.filter((app) => app._id !== id)))
+      .delete(`${API_URL}/appointments/delete/${id}`)
+      .then(() => refresh())
       .catch((err) => console.error('Error deleting appointment:', err));
   };
 
@@ -88,7 +113,7 @@ const Appointments = () => {
       _id: appointment._id,
       patient: appointment.patient._id,
       doctor: appointment.doctor._id,
-      date: appointment.date.slice(0, 10),
+      date: toLocalInput(appointment.date),
     });
     setIsEditMode(true);
   };
@@ -148,9 +173,9 @@ const Appointments = () => {
           </div>
 
           <div className="form-row">
-            <label>Date:</label>
+            <label>Date and time:</label>
             <input
-              type="date"
+              type="datetime-local"
               value={isEditMode ? selectedAppointment.date : newAppointment.date}
               onChange={(e) =>
                 isEditMode
@@ -166,7 +191,8 @@ const Appointments = () => {
 </div>
       {/* Appointment List Section */}
       <div className="appointments-section">
-        <h3 style={{ textAlign: 'center' }}>Appointments ({appointments.length})</h3>
+        <h3 style={{ textAlign: 'center' }}>Appointments ({meta.total})</h3>
+        <Pagination meta={meta} onPage={setPage} search={search} onSearch={changeSearch} placeholder="Search patient or doctor..." />
         <div className="appointment-list">
           {appointments.map((appointment) => (
             <AppointmentCard

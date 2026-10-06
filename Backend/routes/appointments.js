@@ -1,112 +1,157 @@
 import express from "express";
+import mongoose from "mongoose";
 const router = express.Router();
 import Appointment from '../models/Appointment.js';
 import Patient from '../models/Patient.js';
 import Doctor from '../models/Doctor.js';
+import { requireRole } from '../middleware/auth.js';
+import { parsePaging, paginate, escapeRegex } from '../utils/paginate.js';
 
-// Get all appointments with populated fields
-router.route('/').get((req, res) => {
-    Appointment.find()
-        .populate('patient', 'name age gender')
-        .populate('doctor', 'name specialty')
-        .then(appointments => res.json(appointments))
-        .catch(err => res.status(400).json('Error: ' + err));
-});
+// Read: any authenticated role. Create/update/delete: admin + receptionist.
+const canWrite = requireRole('admin', 'receptionist');
 
-// Add new appointment
-// Add new appointment with validations
-router.route('/add').post(async (req, res) => {
-    const { patient, doctor, date } = req.body;
+const DEFAULT_DURATION = 30; // minutes
+const MAX_DURATION = 480;
 
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// True when [start, end) overlaps an existing appointment of the same doctor.
+async function findConflict(doctorId, start, durationMin, excludeId) {
+  const end = new Date(start.getTime() + durationMin * 60000);
+  // Candidates start before our end and no earlier than the longest possible duration before our start.
+  const candidates = await Appointment.find({
+    doctor: doctorId,
+    date: { $lt: end, $gt: new Date(start.getTime() - MAX_DURATION * 60000) },
+    ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+  });
+  return candidates.find((a) => {
+    const aEnd = a.date.getTime() + (a.duration || DEFAULT_DURATION) * 60000;
+    return a.date.getTime() < end.getTime() && aEnd > start.getTime();
+  });
+}
+
+// Validates the final (merged) values and checks the doctor is free.
+async function validateAppointment({ patient, doctor, date, duration }, excludeId) {
+  if (!mongoose.Types.ObjectId.isValid(patient)) throw new HttpError(400, 'A valid patient is required');
+  if (!mongoose.Types.ObjectId.isValid(doctor)) throw new HttpError(400, 'A valid doctor is required');
+
+  const start = new Date(date);
+  if (!date || Number.isNaN(start.getTime())) throw new HttpError(400, 'A valid appointment date is required');
+  if (start <= new Date()) throw new HttpError(400, 'Appointment date must be in the future');
+
+  const mins = duration === undefined || duration === null || duration === '' ? DEFAULT_DURATION : Number(duration);
+  if (!Number.isFinite(mins) || mins < 5 || mins > MAX_DURATION) {
+    throw new HttpError(400, `Duration must be between 5 and ${MAX_DURATION} minutes`);
+  }
+
+  const existingPatient = await Patient.findById(patient);
+  if (!existingPatient) throw new HttpError(404, 'Patient not found');
+  const existingDoctor = await Doctor.findById(doctor);
+  if (!existingDoctor) throw new HttpError(404, 'Doctor not found');
+
+  const clash = await findConflict(doctor, start, mins, excludeId);
+  if (clash) throw new HttpError(409, 'Doctor already has an appointment that overlaps this time');
+
+  return { start, mins, existingDoctor };
+}
+
+const sendError = (res, err) => {
+  if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
+  res.status(400).json({ error: err.message });
+};
+
+// Paginated list (soonest first): ?page&limit&search (patient or doctor name)
+router.get('/', async (req, res) => {
     try {
-        // 1️⃣ Validate patient exists
-        const existingPatient = await Patient.findById(patient);
-        if (!existingPatient) {
-            return res.status(404).json({ error: 'Patient not found' });
+        const paging = parsePaging(req.query);
+        let filter = {};
+        if (paging.search) {
+            const rx = new RegExp(escapeRegex(paging.search), 'i');
+            const [pids, dids] = await Promise.all([
+                Patient.find({ name: rx }).distinct('_id'),
+                Doctor.find({ $or: [{ name: rx }, { specialty: rx }] }).distinct('_id'),
+            ]);
+            filter = { $or: [{ patient: { $in: pids } }, { doctor: { $in: dids } }] };
         }
-
-        // 2️⃣ Validate doctor exists
-        const existingDoctor = await Doctor.findById(doctor);
-        if (!existingDoctor) {
-            return res.status(404).json({ error: 'Doctor not found' });
-        }
-
-        // 3️⃣ Validate appointment date is in the future
-        const appointmentDate = new Date(date);
-        const now = new Date();
-        if (appointmentDate <= now) {
-            return res.status(400).json({ error: 'Appointment date must be in the future' });
-        }
-
-        // 4️⃣ Create the appointment
-        const newAppointment = new Appointment({ patient, doctor, date: appointmentDate });
-        const savedAppointment = await newAppointment.save();
-
-        // 5️⃣ Add patient to doctor's history (optional)
-        if (!existingDoctor.history.includes(patient)) {
-            existingDoctor.history.push(patient);
-            await existingDoctor.save();
-        }
-
-        res.json(savedAppointment);
+        res.json(await paginate(Appointment, filter, paging, {
+            sort: { date: 1, _id: 1 },
+            populate: [['patient', 'name age gender'], ['doctor', 'name specialty']],
+        }));
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
 
-// Update appointment with validations
-router.route('/update/:id').post(async (req, res) => {
-  const { patient, doctor, date } = req.body;
+// Add new appointment with validations and doctor conflict check
+router.post('/add', canWrite, async (req, res) => {
+    const { patient, doctor, date, duration } = req.body || {};
+    try {
+        const { start, mins, existingDoctor } = await validateAppointment({ patient, doctor, date, duration });
 
+        const savedAppointment = await new Appointment({ patient, doctor, date: start, duration: mins }).save();
+
+        // Add patient to doctor's history
+        if (!existingDoctor.history.some((p) => p.toString() === String(patient))) {
+            existingDoctor.history.push(patient);
+            await existingDoctor.save();
+        }
+
+        await savedAppointment.populate('patient', 'name age gender');
+        await savedAppointment.populate('doctor', 'name specialty');
+        res.json(savedAppointment);
+    } catch (err) {
+        sendError(res, err);
+    }
+});
+
+// Update appointment. PUT/PATCH accept partial bodies (merged with the stored values);
+// POST /update/:id is kept for older clients.
+const updateAppointment = async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid ID' });
   try {
-    // 1️⃣ Find appointment
     const appointment = await Appointment.findById(req.params.id);
-    if (!appointment) {
-      return res.status(404).json({ error: 'Appointment not found' });
-    }
+    if (!appointment) throw new HttpError(404, 'Appointment not found');
 
-    // 2️⃣ Validate patient exists
-    const existingPatient = await Patient.findById(patient);
-    if (!existingPatient) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
+    const body = req.body || {};
+    const merged = {
+      patient: body.patient ?? appointment.patient.toString(),
+      doctor: body.doctor ?? appointment.doctor.toString(),
+      date: body.date ?? appointment.date,
+      duration: body.duration ?? appointment.duration,
+    };
+    const { start, mins, existingDoctor } = await validateAppointment(merged, appointment._id);
 
-    // 3️⃣ Validate doctor exists
-    const existingDoctor = await Doctor.findById(doctor);
-    if (!existingDoctor) {
-      return res.status(404).json({ error: 'Doctor not found' });
-    }
-
-    // 4️⃣ Validate appointment date is in the future
-    const appointmentDate = new Date(date);
-    if (appointmentDate <= new Date()) {
-      return res.status(400).json({ error: 'Appointment date must be in the future' });
-    }
-
-    // 5️⃣ Update appointment
-    appointment.patient = patient;
-    appointment.doctor = doctor;
-    appointment.date = appointmentDate;
+    appointment.patient = merged.patient;
+    appointment.doctor = merged.doctor;
+    appointment.date = start;
+    appointment.duration = mins;
     const updatedAppointment = await appointment.save();
 
-    // 6️⃣ Optional: update doctor history
-    if (!existingDoctor.history.includes(patient)) {
-      existingDoctor.history.push(patient);
+    if (!existingDoctor.history.some((p) => p.toString() === String(merged.patient))) {
+      existingDoctor.history.push(merged.patient);
       await existingDoctor.save();
     }
 
-    // 7️⃣ Populate patient and doctor before sending back
     await updatedAppointment.populate('patient', 'name age gender');
     await updatedAppointment.populate('doctor', 'name specialty');
 
     res.json(updatedAppointment);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    sendError(res, err);
   }
-});
+};
+router.put('/:id', canWrite, updateAppointment);
+router.patch('/:id', canWrite, updateAppointment);
+router.post('/update/:id', canWrite, updateAppointment);
 
 // Delete appointment
-router.route('/delete/:id').delete(async (req, res) => {
+router.route('/delete/:id').delete(canWrite, async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Invalid ID' });
     try {
         const appointment = await Appointment.findByIdAndDelete(req.params.id);
 
