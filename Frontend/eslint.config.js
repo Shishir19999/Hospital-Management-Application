@@ -11,6 +11,10 @@ export default [
   react.configs.flat['jsx-runtime'],
   reactHooks.configs.flat.recommended,
   {
+    files: ['vite.config.js'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 'latest',

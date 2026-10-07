@@ -1,64 +1,87 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Link,
-  useLocation,
-} from 'react-router-dom';
-import Appointments from './components/Appointments';
-import Doctors from './components/Doctors';
-import Patients from './components/Patients';
-import Login from './components/Login';
-import ProtectedRoute from './components/ProtectedRoute';
+import { useEffect } from 'react';
+import { BrowserRouter, HashRouter, Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { IS_DEMO } from './api';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import './CSS/App.css';
+import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
+import Appointments from './pages/Appointments';
+import Dashboard from './pages/Dashboard';
+import DoctorDetail from './pages/DoctorDetail';
+import Doctors from './pages/Doctors';
+import Login from './pages/Login';
+import PatientDetail from './pages/PatientDetail';
+import Patients from './pages/Patients';
+import { EmptyState } from './ui/Common';
+import { AppHeader, DemoBanner } from './ui/Shell';
+import './styles.css';
 
-const NavBar = () => {
+// HashRouter keeps deep links working on static hosting under a sub-path.
+const Router = IS_DEMO ? HashRouter : BrowserRouter;
+
+function Page({ title, children }) {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
-  const isLinkActive = (path) =>
-    pathname === path || (path === '/appointments' && pathname === '/');
-  if (!user) return null;
+  useEffect(() => {
+    document.title = `${title} | MediCare HMS`;
+    window.scrollTo(0, 0);
+  }, [title, pathname]);
+  return children;
+}
+
+function Protected() {
+  const { token } = useAuth();
+  if (!token) return <Navigate to="/login" replace />;
   return (
-    <nav>
-      <ul>
-        <li className={isLinkActive('/appointments') ? 'active' : ''}>
-          <Link to="/appointments">Appointments</Link>
-        </li>
-        <li className={isLinkActive('/doctors') ? 'active' : ''}>
-          <Link to="/doctors">Doctors</Link>
-        </li>
-        <li className={isLinkActive('/patients') ? 'active' : ''}>
-          <Link to="/patients">Patients</Link>
-        </li>
-        <li>
-          <span>{user.name} ({user.role})</span>{' '}
-          <button onClick={logout}>Logout</button>
-        </li>
-      </ul>
-    </nav>
+    <>
+      <AppHeader />
+      <main id="main" className="container">
+        <Outlet />
+      </main>
+    </>
   );
-};
+}
 
-const App = () => {
+const NotFound = () => (
+  <main id="main" className="container">
+    <EmptyState
+      title="Page not found"
+      text="The page you are looking for does not exist or has moved."
+      action={
+        <Link className="btn btn-primary" to="/">
+          Go to dashboard
+        </Link>
+      }
+    />
+  </main>
+);
+
+export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="container">
-          <h1 style={{ color: 'green' }}>Hospital Managment App</h1>
-          <NavBar />
-
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-            <Route path="/" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-            <Route path="/doctors" element={<ProtectedRoute><Doctors /></ProtectedRoute>} />
-            <Route path="/patients" element={<ProtectedRoute><Patients /></ProtectedRoute>} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Router>
+              <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById('main')?.focus(); }}>
+                Skip to content
+              </a>
+              {IS_DEMO && <DemoBanner />}
+              <Routes>
+                <Route path="/login" element={<Page title="Sign in"><Login /></Page>} />
+                <Route element={<Protected />}>
+                  <Route path="/" element={<Page title="Dashboard"><Dashboard /></Page>} />
+                  <Route path="/appointments" element={<Page title="Appointments"><Appointments /></Page>} />
+                  <Route path="/patients" element={<Page title="Patients"><Patients /></Page>} />
+                  <Route path="/patients/:id" element={<Page title="Patient"><PatientDetail /></Page>} />
+                  <Route path="/doctors" element={<Page title="Doctors"><Doctors /></Page>} />
+                  <Route path="/doctors/:id" element={<Page title="Doctor"><DoctorDetail /></Page>} />
+                </Route>
+                <Route path="*" element={<Page title="Not found"><NotFound /></Page>} />
+              </Routes>
+            </Router>
+          </DataProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
-};
-
-export default App;
+}

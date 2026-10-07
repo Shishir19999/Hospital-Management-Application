@@ -2,12 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>MediCare HMS | Hospital Management</title>
+    <meta name="description" content="Hospital management app for patients, doctors and appointments with a live dashboard, weekly agenda, conflict warnings and role-based access." />
+    <meta name="theme-color" content="#0f766e" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MediCare HMS | Hospital Management" />
+    <meta property="og:description" content="Patients, doctors and appointments in one place, with a live dashboard and conflict-free scheduling." />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('hms_theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>This application needs JavaScript to run.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
