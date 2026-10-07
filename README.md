@@ -2,6 +2,46 @@
 
 A MERN-stack app for managing patients, doctors and appointments (CRUD, plus per-patient and per-doctor history views) with JWT login and role-based access.
 
+## Live demo
+
+**https://shishir19999.github.io/Hospital-Management-Application/**
+
+A browser-only build with seeded sample data. There is no server and no database: everything is stored in your browser (localStorage) and never leaves your device. Use "Reset demo data" in the banner to start over.
+
+| Role | Email | Password |
+|---|---|---|
+| admin | admin@example.com | Admin@123 |
+| doctor | doctor@example.com | Doctor@123 |
+| receptionist | receptionist@example.com | Reception@123 |
+
+The login screen has buttons that fill these in.
+
+## Features
+- Dashboard with live stats and charts: appointments per day and per week, doctors by specialty, patient age and gender mix
+- Agenda/calendar view with conflict warnings for overlapping appointments
+- Global search (press `/`) across patients, doctors and appointments
+- Sortable, filterable, paginated tables
+- Patient detail page with a medical-history timeline; doctor pages with schedules
+- Appointment status workflow: scheduled, completed, cancelled
+- CSV export and a printable patient summary
+- Role-aware UI: actions a role cannot use are hidden (admin, doctor, receptionist)
+- Light and dark theme (follows the system, remembered), responsive from 320px, keyboard accessible, skeleton, empty and error states, toasts and confirm dialogs
+
+Motion note: the landing hero and dashboard header/sections use a light parallax and scroll-reveal built with IntersectionObserver and requestAnimationFrame (transform and opacity only, no libraries). It is disabled with `prefers-reduced-motion` and on small or low-power screens, and is never applied to dense tables or forms.
+
+## Run it
+
+Full stack (API + MongoDB): follow Setup below, then `npm run dev` from the repo root.
+
+Demo mode (no backend):
+```
+cd Frontend
+npm install
+npm run dev:demo        # local demo
+npm run build:pages     # static build for GitHub Pages in Frontend/dist (base /Hospital-Management-Application/, hash routing)
+```
+Serve the contents of `Frontend/dist` from any static host.
+
 ## Stack
 - Frontend: React 19, Vite 8, React Router, Axios
 - Backend: Node.js, Express, Mongoose (MongoDB), JWT, bcryptjs
