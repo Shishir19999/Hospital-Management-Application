@@ -1,0 +1,2 @@
+function e(e){let t=e==null?``:String(e);return/^[=+\-@\t\r]/.test(t)&&Number.isNaN(Number(t))&&(t=`'${t}`),/[",\r\n]/.test(t)?`"${t.replace(/"/g,`""`)}"`:t}function t(t,n){return[t.map(t=>e(t.label)).join(`,`),...n.map(n=>t.map(t=>e(t.value(n))).join(`,`))].join(`\r
+`)}function n(e,n,r){let i=new Blob([`﻿`+t(n,r)],{type:`text/csv;charset=utf-8`}),a=URL.createObjectURL(i),o=document.createElement(`a`);o.href=a,o.download=e,document.body.appendChild(o),o.click(),o.remove(),setTimeout(()=>URL.revokeObjectURL(a),1e3)}export{n as t};

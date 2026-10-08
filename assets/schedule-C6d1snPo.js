@@ -1,0 +1,1 @@
+import{F as e}from"./domain-CMTw03ke.js";var t=[`Sun`,`Mon`,`Tue`,`Wed`,`Thu`,`Fri`,`Sat`],n=n=>e(n).workingDays.map(e=>t[e]).join(` `);export{n as t};
