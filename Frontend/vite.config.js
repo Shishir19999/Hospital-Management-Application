@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: mode === 'pages' ? REPO_BASE : env.VITE_BASE || '/',
     plugins: [react()],
+    server: { fs: { allow: ['..'] } },
     define: demo ? { 'import.meta.env.VITE_DEMO': JSON.stringify('true') } : {},
     test: { environment: 'node', include: ['src/**/*.test.js'] },
   };

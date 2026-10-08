@@ -1,15 +1,18 @@
-# Frontend image: build with Vite, serve with nginx. Build context: this Frontend folder.
+# Frontend image: build with Vite, serve with nginx. Build context: the repository root (shares code with /shared).
 FROM node:24-slim AS build
 WORKDIR /app
-COPY package*.json ./
+COPY shared ./shared
+WORKDIR /app/Frontend
+COPY Frontend/package*.json ./
 RUN npm ci
-COPY . .
-# The API URL is baked into the bundle at build time and must be reachable from the BROWSER.
-ARG VITE_API_URL=http://localhost:8080
+COPY Frontend/ ./
+# The API address is baked into the bundle. The default /api is proxied to the backend by nginx,
+# so the browser only ever talks to one origin.
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM nginx:1.30-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY Frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/Frontend/dist /usr/share/nginx/html
 EXPOSE 80

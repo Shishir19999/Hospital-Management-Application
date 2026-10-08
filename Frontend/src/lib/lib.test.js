@@ -1,34 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { conflictIds, effectiveStatus, findConflicts } from './appointments';
+import { conflictIds, findConflicts } from './appointments';
 import { csvCell, toCsv } from './csv';
-import { can } from './permissions';
-import { globalSearch } from './search';
-import { ageBuckets, appointmentsPerDay, appointmentsPerWeek, dashboardStats, doctorsBySpecialty, genderMix } from './stats';
+import { can, ROLES } from './permissions';
+import { navFor } from './nav';
+import { money, timeAgo, toneOf } from './format';
 import { paginateRows, sortRows } from './table';
 import { validateAppointment, validateDoctor, validatePatient } from './validate';
 import { dayKey, startOfWeek } from './dates';
 
-const at = (iso, extra = {}) => ({ _id: iso, date: iso, doctor: { _id: 'd1' }, patient: { _id: 'p1', name: 'Ann' }, ...extra });
+const at = (iso, extra = {}) => ({ _id: iso, date: iso, status: 'scheduled', doctor: { _id: 'd1' }, patient: { _id: 'p1', name: 'Ann' }, ...extra });
 
 describe('appointments', () => {
-  it('derives a status when none is stored', () => {
-    const now = new Date('2026-05-10T12:00:00');
-    expect(effectiveStatus(at('2026-05-09T10:00:00'), now)).toBe('completed');
-    expect(effectiveStatus(at('2026-05-11T10:00:00'), now)).toBe('scheduled');
-    expect(effectiveStatus(at('2026-05-11T10:00:00', { status: 'cancelled' }), now)).toBe('cancelled');
-  });
-
-  it('finds overlaps for the same doctor only, ignoring cancelled ones', () => {
+  it('finds overlaps for the same doctor only, ignoring cancelled and no-show ones', () => {
     const list = [
       at('2026-05-11T10:00:00', { duration: 60 }),
       at('2026-05-11T12:00:00', { doctor: { _id: 'd2' } }),
       at('2026-05-11T14:00:00', { status: 'cancelled' }),
+      at('2026-05-11T15:00:00', { status: 'no_show' }),
     ];
-    const overlap = { doctor: 'd1', date: '2026-05-11T10:30:00', duration: 30 };
-    expect(findConflicts(list, overlap)).toHaveLength(1);
+    expect(findConflicts(list, { doctor: 'd1', date: '2026-05-11T10:30:00', duration: 30 })).toHaveLength(1);
     expect(findConflicts(list, { doctor: 'd1', date: '2026-05-11T11:00:00', duration: 30 })).toHaveLength(0);
     expect(findConflicts(list, { doctor: 'd1', date: '2026-05-11T14:00:00', duration: 30 })).toHaveLength(0);
+    expect(findConflicts(list, { doctor: 'd1', date: '2026-05-11T15:10:00', duration: 30 })).toHaveLength(0);
     expect(findConflicts(list, { doctor: 'd2', date: '2026-05-11T12:15:00', duration: 30 })).toHaveLength(1);
+    expect(findConflicts(list, { id: '2026-05-11T10:00:00', doctor: 'd1', date: '2026-05-11T10:30:00', duration: 30 })).toHaveLength(0);
   });
 
   it('lists every appointment that overlaps another', () => {
@@ -41,41 +36,12 @@ describe('appointments', () => {
   });
 });
 
-describe('stats', () => {
-  const appts = [
-    at('2026-05-11T10:00:00'),
-    at('2026-05-11T11:00:00', { status: 'cancelled' }),
-    at('2026-05-12T09:00:00'),
-  ];
-  it('counts appointments per day without cancelled ones', () => {
-    const days = appointmentsPerDay(appts, new Date('2026-05-11T00:00:00'), 3);
-    expect(days.map((d) => d.value)).toEqual([1, 1, 0]);
-  });
-  it('groups by Monday-based weeks', () => {
-    const weeks = appointmentsPerWeek(appts, new Date('2026-05-14T00:00:00'), 2);
-    expect(weeks.map((w) => w.value)).toEqual([0, 2]);
-    expect(dayKey(startOfWeek(new Date('2026-05-17T10:00:00')))).toBe('2026-05-11');
-  });
-  it('summarises doctors, patients and dashboard counters', () => {
-    expect(doctorsBySpecialty([{ specialty: 'B' }, { specialty: 'A' }, { specialty: 'B' }])).toEqual([
-      { label: 'B', value: 2 },
-      { label: 'A', value: 1 },
-    ]);
-    const patients = [{ age: 5, gender: 'Male' }, { age: 40, gender: 'Female' }, { age: 70, gender: 'Female' }];
-    expect(genderMix(patients)).toEqual([{ label: 'Female', value: 2 }, { label: 'Male', value: 1 }]);
-    expect(ageBuckets(patients).map((b) => b.value)).toEqual([1, 0, 1, 0, 1]);
-    const s = dashboardStats({ patients, doctors: [{}], appointments: appts }, new Date('2026-05-11T08:00:00'));
-    expect(s).toMatchObject({ patients: 3, doctors: 1, today: 1, upcoming: 2, cancelled: 1 });
-  });
-});
-
-describe('table, csv, search, permissions, validation', () => {
+describe('table, csv, dates', () => {
   it('sorts naturally and paginates safely', () => {
     const rows = [{ n: 'b10' }, { n: 'b2' }, { n: 'a1' }];
     expect(sortRows(rows, (r) => r.n, 'asc').map((r) => r.n)).toEqual(['a1', 'b2', 'b10']);
     expect(sortRows(rows, (r) => r.n, 'desc')[0].n).toBe('b10');
-    const p = paginateRows([1, 2, 3, 4, 5], 9, 2);
-    expect(p).toMatchObject({ page: 3, pages: 3, rows: [5] });
+    expect(paginateRows([1, 2, 3, 4, 5], 9, 2)).toMatchObject({ page: 3, pages: 3, rows: [5] });
   });
   it('escapes csv cells and blocks formula injection', () => {
     expect(csvCell('a,b')).toBe('"a,b"');
@@ -84,22 +50,51 @@ describe('table, csv, search, permissions, validation', () => {
     expect(csvCell(-5)).toBe('-5');
     expect(toCsv([{ label: 'N', value: (r) => r.n }], [{ n: 1 }, { n: 'x' }])).toBe('N\r\n1\r\nx');
   });
-  it('searches across collections', () => {
-    const data = {
-      patients: [{ _id: 'p1', name: 'Maya Reyes' }],
-      doctors: [{ _id: 'd1', name: 'Dr. Reyes', specialty: 'Cardiology' }],
-      appointments: [at('2026-05-11T10:00:00', { patient: { name: 'Maya Reyes' }, doctor: { name: 'Dr. Reyes' } })],
-    };
-    const r = globalSearch('reyes', data);
-    expect([r.patients.length, r.doctors.length, r.appointments.length]).toEqual([1, 1, 1]);
-    expect(globalSearch('  ', data).patients).toEqual([]);
+  it('weeks start on Monday', () => {
+    expect(dayKey(startOfWeek(new Date('2026-05-17T10:00:00')))).toBe('2026-05-11');
   });
-  it('applies role permissions', () => {
-    expect(can('admin', 'doctors', 'create')).toBe(true);
-    expect(can('receptionist', 'doctors', 'create')).toBe(false);
-    expect(can('doctor', 'patients', 'update')).toBe(false);
-    expect(can('doctor', 'appointments', 'status')).toBe(true);
-    expect(can('receptionist', 'patients', 'remove')).toBe(false);
+});
+
+describe('permissions and menus', () => {
+  it('uses the shared matrix', () => {
+    expect(can('admin', 'doctors.manage')).toBe(true);
+    expect(can('receptionist', 'doctors.manage')).toBe(false);
+    expect(can('doctor', 'patients.update')).toBe(false);
+    expect(can('doctor', 'appointments.status')).toBe(true);
+    expect(can('nurse', 'visits.vitals')).toBe(true);
+    expect(can('nurse', 'prescriptions.write')).toBe(false);
+    expect(can('pharmacist', 'pharmacy.dispense')).toBe(true);
+    expect(can('lab_tech', 'labs.result')).toBe(true);
+  });
+  it('gives every role its own menu with a role-specific home', () => {
+    const names = Object.fromEntries(ROLES.map((r) => [r, navFor(r, can).map((i) => i.label)]));
+    expect(names.admin).toEqual(expect.arrayContaining(['Overview', 'Reports', 'Audit log', 'Staff', 'Billing', 'Stock']));
+    expect(names.doctor[0]).toBe('My day');
+    expect(names.doctor).toEqual(expect.arrayContaining(['Queue', 'Visits', 'Lab']));
+    expect(names.doctor).not.toContain('Billing');
+    expect(names.nurse[0]).toBe('Triage');
+    expect(names.nurse).toContain('Wards and beds');
+    expect(names.receptionist[0]).toBe('Front desk');
+    expect(names.receptionist).toEqual(expect.arrayContaining(['Billing', 'Appointments', 'Queue']));
+    expect(names.receptionist).not.toContain('Visits');
+    expect(names.pharmacist[0]).toBe('Dispensing');
+    expect(names.pharmacist).toContain('Stock');
+    expect(names.lab_tech[0]).toBe('Worklist');
+    expect(names.lab_tech).not.toContain('Billing');
+    expect(names.nurse).not.toContain('Audit log');
+  });
+});
+
+describe('formatting and validation', () => {
+  it('formats money, tones and relative time', () => {
+    expect(money(1234.5)).toBe('$1,234.50');
+    expect(toneOf('overdue')).toBe('bad');
+    expect(toneOf('paid')).toBe('ok');
+    expect(toneOf('unknown-thing')).toBe('neutral');
+    const now = new Date('2026-10-08T12:00:00Z');
+    expect(timeAgo('2026-10-08T11:30:00Z', now)).toBe('30 min ago');
+    expect(timeAgo('2026-10-08T14:00:00Z', now)).toBe('in 2 h');
+    expect(timeAgo('2026-10-08T12:00:20Z', now)).toBe('just now');
   });
   it('validates forms', () => {
     expect(Object.keys(validatePatient({ name: ' ', age: '', gender: '' }))).toEqual(['name', 'age', 'gender']);
@@ -108,7 +103,6 @@ describe('table, csv, search, permissions, validation', () => {
     const now = new Date('2026-05-10T10:00:00');
     expect(validateAppointment({ patient: 'p', doctor: 'd', date: '2026-05-09T10:00', duration: 30 }, now).date).toBeTruthy();
     expect(validateAppointment({ patient: 'p', doctor: 'd', date: '2026-05-11T10:00', duration: 30 }, now)).toEqual({});
-    expect(validateAppointment({ patient: 'p', doctor: 'd', date: '2026-05-09T10:00', duration: 30 }, now, { requireFuture: false })).toEqual({});
     expect(validateAppointment({ patient: 'p', doctor: 'd', date: '2026-05-11T10:00', duration: 2 }, now).duration).toBeTruthy();
   });
 });

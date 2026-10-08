@@ -7,13 +7,14 @@ import { Parallax, Reveal } from '../ui/Motion';
 import { ThemeToggle } from '../ui/Shell';
 import Icon from '../ui/Icon';
 import { DEMO_USERS } from '../lib/constants';
+import { ROLE_LABELS } from '../lib/permissions';
 import { errorMessage } from '../api/errors';
 
 const FEATURES = [
-  ['dashboard', 'Live dashboard', 'Appointment trends, doctors by specialty and the patient age and gender mix at a glance.'],
-  ['calendar', 'Agenda and conflicts', 'A weekly agenda per doctor that flags double-booked time slots before they cause trouble.'],
-  ['patients', 'Patient records', 'Searchable, sortable records with a medical history timeline and a printable summary.'],
-  ['doctors', 'Doctor schedules', 'See who is working, how busy each day is and which patients each doctor has seen.'],
+  ['queue', 'Outpatient queue', 'Token numbers, triage priority and a large waiting-room board so nobody is missed.'],
+  ['visit', 'Visits and prescriptions', 'Vitals with BMI and flags, diagnoses, printable prescriptions and allergy checks.'],
+  ['flask', 'Lab and pharmacy', 'Orders, reference ranges and abnormal flags, plus stock with expiry that drops as you dispense.'],
+  ['bill', 'Billing and wards', 'Invoices with discounts, tax, part payments and receipts, and a live bed board for admissions.'],
 ];
 
 export default function Login() {
@@ -73,11 +74,10 @@ export default function Login() {
           <div className="hero-copy">
             <h1>Run the whole clinic from one calm screen.</h1>
             <p>
-              Patients, doctors and appointments in a single place, with a live dashboard, conflict-free scheduling and
-              role-aware access for admins, doctors and reception.
+              From the front desk to the ward, pharmacy and lab: one place for patients, visits, queues, prescriptions, results and bills, with the right screens for every role.
             </p>
           </div>
-          <form className="card login-card" onSubmit={submit} noValidate>
+          <div className="login-col"><form className="card login-card" onSubmit={submit} noValidate>
             <h2>{needsSetup ? 'Create the first admin account' : 'Sign in'}</h2>
             {formError && (
               <p className="form-error" role="alert">
@@ -113,31 +113,28 @@ export default function Login() {
             <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
               {busy ? 'Please wait...' : needsSetup ? 'Create admin' : 'Sign in'}
             </button>
-            {IS_DEMO && (
-              <div className="demo-logins">
-                <h3>Demo logins</h3>
-                <p className="muted">Pick a role to fill in the form, then press Sign in.</p>
-                <ul>
-                  {DEMO_USERS.map((u) => (
-                    <li key={u.role}>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setForm((f) => ({ ...f, email: u.email, password: u.password }))}
-                      >
-                        {u.role}
-                      </button>
-                      <code>{u.email}</code> <code>{u.password}</code>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </form>
+            </form>
+          {IS_DEMO && (
+            <details className="card preview-accounts">
+              <summary>Preview accounts</summary>
+              <p className="muted">Sample sign-ins for the live preview. The buttons only fill the form; press Sign in yourself.</p>
+              <ul>
+                {DEMO_USERS.map((u) => (
+                  <li key={u.role}>
+                    <span>{ROLE_LABELS[u.role]}</span>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setForm((f) => ({ ...f, email: u.email, password: u.password }))}>
+                      Fill form<span className="sr-only"> as {ROLE_LABELS[u.role]}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          </div>
         </div>
       </section>
       <section className="features" aria-labelledby="feat-h">
-        <h2 id="feat-h">Everything the front desk needs</h2>
+        <h2 id="feat-h">Built for the whole care team</h2>
         <div className="feature-grid">
           {FEATURES.map(([icon, title, text], i) => (
             <Reveal key={title} className="card feature" delay={i * 80}>

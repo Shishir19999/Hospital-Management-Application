@@ -14,10 +14,11 @@ import Icon from '../ui/Icon';
 import { ConfirmDialog } from '../ui/Modal';
 import { EmptyState, ErrorState, PageHeader, SkeletonList } from '../ui/Common';
 import { PatientFormModal } from '../ui/Forms';
+import { Tag } from '../ui/Kit';
 
 export default function Patients() {
   const { role } = useAuth();
-  const { patients, state, error, reload, mutate } = useData();
+  const { patients, state, error, reload, refresh } = useData();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [gender, setGender] = useState('');
@@ -26,41 +27,29 @@ export default function Patients() {
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return patients.filter(
-      (p) => (!gender || p.gender === gender) && (!t || `${p.name} ${p.email || ''} ${p.phone || ''}`.toLowerCase().includes(t))
-    );
+    return patients.filter((p) => (!gender || p.gender === gender) && (!t || `${p.name} ${p.mrn || ''} ${p.email || ''} ${p.phone || ''}`.toLowerCase().includes(t)));
   }, [patients, q, gender]);
 
   const columns = [
-    {
-      key: 'name',
-      label: 'Name',
-      sort: (p) => p.name,
-      render: (p) => <Link to={`/patients/${p._id}`}>{p.name}</Link>,
-    },
+    { key: 'mrn', label: 'Record no.', sort: (p) => p.mrn || '', render: (p) => <code>{p.mrn || '-'}</code> },
+    { key: 'name', label: 'Name', sort: (p) => p.name, render: (p) => <Link to={`/patients/${p._id}`}>{p.name}</Link> },
     { key: 'age', label: 'Age', sort: (p) => Number(p.age), className: 'num' },
     { key: 'gender', label: 'Gender', sort: (p) => p.gender },
-    ...(api.capabilities.extras
-      ? [
-          { key: 'phone', label: 'Phone', sort: (p) => p.phone, render: (p) => p.phone || '-' },
-          { key: 'cond', label: 'Conditions', sort: (p) => p.conditions, render: (p) => p.conditions || '-' },
-        ]
-      : []),
+    { key: 'phone', label: 'Phone', sort: (p) => p.phone, render: (p) => p.phone || '-' },
+    { key: 'allergies', label: 'Allergies', render: (p) => (p.allergies?.length ? <Tag tone="bad">{p.allergies.join(', ')}</Tag> : <span className="muted">None</span>) },
     {
       key: 'actions',
       label: 'Actions',
       className: 'actions',
       render: (p) => (
         <div className="row-actions">
-          <Link className="btn btn-ghost btn-sm" to={`/patients/${p._id}`}>
-            View
-          </Link>
-          {can(role, 'patients', 'update') && (
+          <Link className="btn btn-ghost btn-sm" to={`/patients/${p._id}`}>View</Link>
+          {can(role, 'patients.update') && (
             <button type="button" className="btn btn-icon btn-ghost" aria-label={`Edit ${p.name}`} onClick={() => setForm(p)}>
               <Icon name="edit" />
             </button>
           )}
-          {can(role, 'patients', 'remove') && (
+          {can(role, 'patients.remove') && (
             <button type="button" className="btn btn-icon btn-ghost danger" aria-label={`Delete ${p.name}`} onClick={() => setToDelete(p)}>
               <Icon name="trash" />
             </button>
@@ -72,8 +61,9 @@ export default function Patients() {
 
   const remove = async () => {
     try {
-      await mutate(() => api.patients.remove(toDelete._id));
-      toast.success(`${toDelete.name} was deleted along with their appointments.`);
+      await api.del(`/patients/delete/${toDelete._id}`);
+      await refresh();
+      toast.success(`${toDelete.name} was deleted.`);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -83,17 +73,12 @@ export default function Patients() {
   return (
     <>
       <PageHeader title="Patients" subtitle={`${patients.length} registered patients`}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={!rows.length}
-          onClick={() => downloadCsv('patients.csv', PATIENT_CSV, rows)}
-        >
+        <button type="button" className="btn btn-ghost" disabled={!rows.length} onClick={() => downloadCsv('patients.csv', PATIENT_CSV, rows)}>
           <Icon name="download" /> Export CSV
         </button>
-        {can(role, 'patients', 'create') && (
+        {can(role, 'patients.create') && (
           <button type="button" className="btn btn-primary" onClick={() => setForm('new')}>
-            <Icon name="plus" /> Add patient
+            <Icon name="plus" /> Register patient
           </button>
         )}
       </PageHeader>
@@ -101,7 +86,7 @@ export default function Patients() {
       <div className="toolbar">
         <div className="field">
           <label htmlFor="pt-q">Search patients</label>
-          <input id="pt-q" type="search" placeholder="Name, email or phone" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input id="pt-q" type="search" placeholder="Name, record number, phone or email" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="pt-g">Gender</label>
@@ -125,11 +110,11 @@ export default function Patients() {
           empty={
             <EmptyState
               title={patients.length ? 'No patients match your filters' : 'No patients yet'}
-              text={patients.length ? 'Try a different search or clear the gender filter.' : 'Add the first patient to get started.'}
+              text={patients.length ? 'Try a different search or clear the gender filter.' : 'Register the first patient to get started.'}
               action={
-                !patients.length && can(role, 'patients', 'create') ? (
+                !patients.length && can(role, 'patients.create') ? (
                   <button type="button" className="btn btn-primary" onClick={() => setForm('new')}>
-                    Add patient
+                    Register patient
                   </button>
                 ) : null
               }
@@ -142,7 +127,7 @@ export default function Patients() {
       {toDelete && (
         <ConfirmDialog
           title="Delete patient?"
-          message={`${toDelete.name} and all of their appointments will be removed. This cannot be undone.`}
+          message={`${toDelete.name} and their appointments will be removed. Patients with visits, bills or admissions cannot be deleted. This cannot be undone.`}
           onConfirm={remove}
           onCancel={() => setToDelete(null)}
         />
