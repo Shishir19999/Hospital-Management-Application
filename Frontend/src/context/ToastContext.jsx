@@ -28,7 +28,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-region" aria-label="Notifications">
+      <div className="toast-region" role="region" aria-label="Notifications">
         {toasts.map((t) => (
           <div key={t.id} className={`toast toast-${t.kind}`} role={t.kind === 'error' ? 'alert' : 'status'}>
             <span>{t.message}</span>

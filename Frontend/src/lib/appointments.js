@@ -1,37 +1,18 @@
-export const STATUSES = ['scheduled', 'completed', 'cancelled'];
+import { ACTIVE_APPOINTMENT, overlaps } from '../../../shared/domain.js';
+
+export const STATUSES = ['scheduled', 'checked_in', 'completed', 'cancelled', 'no_show'];
 export const DEFAULT_DURATION = 30;
 
 export const refId = (x) => (x && typeof x === 'object' ? x._id : x);
-
 export const startMs = (a) => new Date(a.date).getTime();
 export const endMs = (a) => startMs(a) + (a.duration || DEFAULT_DURATION) * 60000;
-
-// The backend may not store a status; fall back to a time-based one.
-export function effectiveStatus(a, now = new Date()) {
-  if (a.status && STATUSES.includes(a.status)) return a.status;
-  return startMs(a) < new Date(now).getTime() ? 'completed' : 'scheduled';
-}
-
-export const overlaps = (a, b) => startMs(a) < endMs(b) && endMs(a) > startMs(b);
-
-// Active appointments of the same doctor that overlap the candidate.
-export function findConflicts(appts, candidate) {
-  const cand = { date: candidate.date, duration: Number(candidate.duration) || DEFAULT_DURATION };
-  if (Number.isNaN(startMs(cand))) return [];
-  return appts.filter(
-    (a) =>
-      a._id !== candidate.id &&
-      refId(a.doctor) === candidate.doctor &&
-      effectiveStatus(a) !== 'cancelled' &&
-      overlaps(a, cand)
-  );
-}
+export const effectiveStatus = (a) => a.status || 'scheduled';
 
 // Ids of appointments that overlap another active appointment of the same doctor.
 export function conflictIds(appts) {
   const byDoctor = new Map();
   for (const a of appts) {
-    if (effectiveStatus(a) === 'cancelled') continue;
+    if (!ACTIVE_APPOINTMENT(a)) continue;
     const k = refId(a.doctor);
     if (!byDoctor.has(k)) byDoctor.set(k, []);
     byDoctor.get(k).push(a);
@@ -39,14 +20,23 @@ export function conflictIds(appts) {
   const ids = new Set();
   for (const list of byDoctor.values()) {
     list.sort((x, y) => startMs(x) - startMs(y));
-    let reach = null;
-    for (const a of list) {
-      if (reach && startMs(a) < endMs(reach)) {
-        ids.add(a._id);
-        ids.add(reach._id);
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length && startMs(list[j]) < endMs(list[i]); j++) {
+        if (overlaps(startMs(list[i]), list[i].duration || DEFAULT_DURATION, startMs(list[j]), list[j].duration || DEFAULT_DURATION)) {
+          ids.add(list[i]._id);
+          ids.add(list[j]._id);
+        }
       }
-      if (!reach || endMs(a) > endMs(reach)) reach = a;
     }
   }
   return ids;
+}
+
+// Active bookings of one doctor that overlap a candidate slot.
+export function findConflicts(appts, { id, doctor, date, duration }) {
+  const s = new Date(date).getTime();
+  if (Number.isNaN(s)) return [];
+  return appts.filter(
+    (a) => a._id !== id && refId(a.doctor) === doctor && ACTIVE_APPOINTMENT(a) && overlaps(startMs(a), a.duration || DEFAULT_DURATION, s, Number(duration) || DEFAULT_DURATION)
+  );
 }

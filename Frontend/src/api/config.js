@@ -1,12 +1,9 @@
-import axios from 'axios';
-
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Attach (or clear) the JWT on every axios request made by the app.
+let authToken = null;
+
+// Remember (or clear) the session token used for every API call.
 export function setAuthToken(token) {
-  if (token) {
-    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-  } else {
-    delete axios.defaults.headers.common.Authorization;
-  }
+  authToken = token || null;
 }
+export const getAuthToken = () => authToken;

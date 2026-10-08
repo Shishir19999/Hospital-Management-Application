@@ -1,0 +1,7 @@
+{
+  "name": "hospital-shared",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Framework-free domain code shared by the API server and the browser-only live preview."
+}
